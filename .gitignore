@@ -1,4 +1,4 @@
-gpu_fft.c
+gpu_fft_py.c
 
 *.py[cod]
 
