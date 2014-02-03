@@ -37,7 +37,7 @@ struct GPU_FFT_COMPLEX {
 };
 
 struct GPU_FFT {
-    struct GPU_FFT_COMPLEX *in, *out;
+    struct GPU_FFT_COMPLEX *in_, *out;
     int mb, step;
     unsigned timeout, noflush, handle, size, vc_msg;
 };

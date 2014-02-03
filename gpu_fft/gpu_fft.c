@@ -98,7 +98,7 @@ int gpu_fft_prepare(
     info = (struct GPU_FFT *) (ptr.arm.bptr + size - info_bytes);
 
     // Ping-pong buffers leave results in or out of place
-    info->in = info->out = ptr.arm.cptr;
+    info->in_ = info->out = ptr.arm.cptr;
     info->step = data_bytes / sizeof(COMPLEX);
     if (passes&1) info->out += info->step * jobs; // odd => out of place
     vc_data = advance(&ptr, data_bytes*jobs*2);
@@ -152,7 +152,7 @@ unsigned gpu_fft_execute(struct GPU_FFT *info) {
 void gpu_fft_release(struct GPU_FFT *info) {
     int mb = info->mb;
     unsigned handle = info->handle;
-    unmapmem(info->in, info->size);
+    unmapmem(info->in_, info->size);
     mem_unlock(mb, handle);
     mem_free(mb, handle);
     qpu_enable(mb, 0);

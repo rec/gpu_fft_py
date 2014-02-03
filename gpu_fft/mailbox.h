@@ -27,12 +27,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <linux/ioctl.h>
 
-#define MAJOR_NUM 100
+extern int MAJOR_NUM;
+extern const char* DEVICE_FILE_NAME;
+
 #define IOCTL_MBOX_PROPERTY _IOWR(MAJOR_NUM, 0, char *)
-#define DEVICE_FILE_NAME "char_dev"
 
 int mbox_open();
 void mbox_close(int file_desc);
+void mbox_error(const char* name);
+int mbox_open_by_name(const char* name);
 
 unsigned get_version(int file_desc);
 unsigned mem_alloc(int file_desc, unsigned size, unsigned align, unsigned flags);
