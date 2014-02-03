@@ -1,3 +1,5 @@
+gpu_fft.c
+
 *.py[cod]
 
 # C extensions
