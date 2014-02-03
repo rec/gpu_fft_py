@@ -1,7 +1,6 @@
 cdef extern from "mailbox.h":
   int mbox_open()
-  mbox_close(int mb)
-
+  void mbox_close(int mb)
 
 cdef extern from "gpu_fft.h":
   cdef struct GPU_FFT_COMPLEX:
@@ -22,3 +21,23 @@ cdef extern from "gpu_fft.h":
 
   unsigned gpu_fft_execute(GPU_FFT *info)
   void gpu_fft_release(GPU_FFT *info)
+
+
+cdef class GpuFft:
+  cdef GPU_FFT* thisptr
+  cdef int mb
+
+  def __cinit__(self, int log_size, is_forward=True, int jobs=10):
+    cdef int forward
+    if is_forward:
+      forward = 1
+    else:
+      forward = 0
+
+    assert 8 <= log_size <= 17, 'log_size must be between 8 and 17'
+    self.mb = mbox_open()
+    gpu_fft_prepare(self.mb, log_size, forward, jobs, &self.thisptr)
+
+  def __dealloc__(self):
+    gpu_fft_release(self.thisptr)
+    mbox_close(self.mb)
