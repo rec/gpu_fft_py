@@ -67,8 +67,7 @@ cdef class GpuFft:
     if buffer:
       self.buffer = buffer
     else:
-      self.buffer = np.array(dtype=complex)
-      self.buffer.resize([self.jobs, self.size])
+      self.buffer = np.empty((self.jobs, self.size), dtype=complex)
 
   def __dealloc__(self):
     if self.prepared:
@@ -80,17 +79,19 @@ cdef class GpuFft:
     cdef float re, im
     cdef int i, j, data_count = 0, size_count = 0
     cdef GPU_FFT_COMPLEX* base
-    for j, data in enumerate(job_data):
+    for j in xrange(len(job_data)):
+      data = job_data[j]
       assert j < self.jobs
       data_count = j
       base = self.fft.in_ + j * self.fft.step;
-      for i, d in enumerate(data):
+      for i in xrange(len(data)):
+        d = data[i]
         assert i < self.size
         size_count = i
         try:
           re, im = d
         except:
-          re, im = d.imag, d.real
+          re, im = d.real, d.imag
         base[i].re = re
         base[i].im = im
       assert size_count == (self.size - 1)
