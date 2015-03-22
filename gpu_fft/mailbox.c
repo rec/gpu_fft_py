@@ -39,10 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define PAGE_SIZE (4*1024)
 
-int MAJOR_NUM = 100;
-const char* DEVICE_FILE_NAME = "char_dev";
-
-
 void *mapmem(unsigned base, unsigned size)
 {
    int mem_fd;
@@ -71,7 +67,7 @@ void *mapmem(unsigned base, unsigned size)
    return (char *)mem + offset;
 }
 
-void *unmapmem(void *addr, unsigned size)
+void unmapmem(void *addr, unsigned size)
 {
    int s = munmap(addr, size);
    if (s != 0) {
@@ -244,23 +240,17 @@ unsigned execute_qpu(int file_desc, unsigned num_qpus, unsigned control, unsigne
    return p[5];
 }
 
-void mbox_error(const char* name) {
-  printf("Can't open device file: %s\n", name);
-  printf("Try creating a device file with: sudo mknod %s c %d 0\n", name, MAJOR_NUM);
-}
-
-int mbox_open_by_name(const char* name) {
-   // open a char device file used for communicating with kernel mbox driver
-   return open(name, 0);
-}
-
 int mbox_open() {
-  int fd = mbox_open_by_name(DEVICE_FILE_NAME);
-  if (fd < 0) {
-    mbox_error(DEVICE_FILE_NAME);
-    exit(-1);
-  }
-  return fd;
+   int file_desc;
+
+   // open a char device file used for communicating with kernel mbox driver
+   file_desc = open(DEVICE_FILE_NAME, 0);
+   if (file_desc < 0) {
+      printf("Can't open device file: %s\n", DEVICE_FILE_NAME);
+      printf("Try creating a device file with: sudo mknod %s c %d 0\n", DEVICE_FILE_NAME, MAJOR_NUM);
+      exit(-1);
+   }
+   return file_desc;
 }
 
 void mbox_close(int file_desc) {

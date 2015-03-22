@@ -1,21 +1,30 @@
 import numpy as np
+cimport numpy as np
+cimport cython
 from cpython cimport bool
 
 cdef extern from "mailbox.h":
-  int mbox_open_by_name(const char* s)
-  int mbox_error(const char* s)
+  int mbox_open()
   void mbox_close(int mb)
   const char* DEVICE_FILE_NAME
 
 cdef extern from "gpu_fft.h":
+  enum: GPU_FFT_QPUS
+
   cdef struct GPU_FFT_COMPLEX:
     float re, im
 
+  cdef struct GPU_FFT_BASE:
+    int mb
+    unsigned handle, size, vc_msg, vc_code, peri_size
+    unsigned vc_unifs[GPU_FFT_QPUS]
+    unsigned* peri
+
   cdef struct GPU_FFT:
+    GPU_FFT_BASE base
     GPU_FFT_COMPLEX* in_
     GPU_FFT_COMPLEX* out
-    int mb, step
-    unsigned timeout, noflush, handle, size, vc_msg
+    int x, y, step
 
   int gpu_fft_prepare(
       int mb,         # mailbox file_desc
@@ -32,9 +41,9 @@ cdef class GpuFft:
   cdef GPU_FFT* fft
   cdef int mb, jobs, log_size, size
   cdef bool prepared
+  cdef np.ndarray buffer
 
-  def __cinit__(self, int log_size, is_forward=True, int jobs=10, buffer=None,
-                device_name=DEVICE_FILE_NAME):
+  def __cinit__(self, int log_size, is_forward=True, int jobs=10, buffer=None):
     cdef int forward, result
     if is_forward:
       forward = 1
@@ -47,9 +56,8 @@ cdef class GpuFft:
     self.size = 2 ** log_size
     self.prepared = False
     print('about to open device')
-    self.mb = mbox_open_by_name(device_name)
+    self.mb = mbox_open()
     if self.mb < 0:
-      mbox_error(device_name)
       print('Couldn\'t open device')
       raise Exception("Couldn't open device.")
     result = gpu_fft_prepare(self.mb, log_size, forward, jobs, &self.fft)
@@ -67,8 +75,7 @@ cdef class GpuFft:
     if buffer:
       self.buffer = buffer
     else:
-      self.buffer = np.array(dtype=complex)
-      self.buffer.resize([self.jobs, self.size])
+      self.buffer = np.empty((self.jobs, self.size), dtype=complex)
 
   def __dealloc__(self):
     if self.prepared:
@@ -80,17 +87,19 @@ cdef class GpuFft:
     cdef float re, im
     cdef int i, j, data_count = 0, size_count = 0
     cdef GPU_FFT_COMPLEX* base
-    for j, data in enumerate(job_data):
+    for j in xrange(len(job_data)):
+      data = job_data[j]
       assert j < self.jobs
       data_count = j
       base = self.fft.in_ + j * self.fft.step;
-      for i, d in enumerate(data):
+      for i in xrange(len(data)):
+        d = data[i]
         assert i < self.size
         size_count = i
         try:
           re, im = d
         except:
-          re, im = d.imag, d.real
+          re, im = d.real, d.imag
         base[i].re = re
         base[i].im = im
       assert size_count == (self.size - 1)
